@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]> <html class="lt-ie9 lt-ie8 lt-ie7" lang="en"> <![endif]-->
+<!--[if IE 7]> <html class="lt-ie9 lt-ie8" lang="en"> <![endif]-->
+<!--[if IE 8]> <html class="lt-ie9" lang="en"> <![endif]-->
+<!--[if gt IE 8]><!-->
+<html lang="en">
+<!--<![endif]-->
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>Login Form</title>
+  <link rel="stylesheet" href="css/style.css">
+
+  <!--[if lt IE 9]><script src="//html5shim.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+</head>
+
+<body>
+  <section class="container">
+    <div class="login">
+      <h1>Login to App</h1>
+      <!-- <form method="post" action="static/index.html"> -->
+      <form name="loginForm" action="javascript:authenticate()" method="post" onsubmit="login()" enctype="multipart/form-data">
+        <p>
+          <input type="text" name="username" value="" placeholder="UserName">
+        </p>
+        <p>
+          <input type="password" name="password" value="" placeholder="Password">
+        </p>
+        <!-- <p class="remember_me">
+          <label>
+            <input type="checkbox" name="remember_me" id="remember_me">
+            Remember me on this computer
+          </label>
+        </p> -->
+        <p class="submit">
+          <input type="submit">
+        </p>
+      </form>
+    </div>
+    <script src="script/main.js"></script>
+    <script type="text/javascript">
+      function authenticate() {
+        var cookie = getFirstCookieName()
+        var form = document.forms["loginForm"];
+
+        if (cookie) {
+          window.location.replace("http://localhost:8080/upload.html?username="+ form["username"].value);
+        } else {
+          alert("Invalid User Login")
+        }
+      }
+      function login() {
+
+        var xhr = new XMLHttpRequest();
+
+        var form = document.forms["loginForm"];
+        var data = {};
+        for (var i = 0, ii = form.length; i < ii; i++) {
+          var input = form[i];
+          if (input.name) {
+            data[input.name] = input.value;
+          }
+        }
+
+        xhr.onreadystatechange = function () {
+          if (xhr.readyState === 4 && xhr.status === 200) {
+            //alert(xhr.response)
+            var response = JSON.parse(xhr.response);
+            setCookie(response.name, response.value, response.lifetime);
+          }
+        }
+
+
+        // send credentials
+        xhr.open(form.method, "http://localhost:8080/user/login", false);
+        xhr.setRequestHeader("Content-Type", "application/json; charset=UTF-8");
+        console.log(JSON.stringify(data));
+
+        xhr.send(JSON.stringify(data));
+
+      }
+    </script>
+    <!-- <div class="login-help">
+      <p>Forgot your password? <a href="static/index.html">Click here to reset it</a>.</p>
+    </div> -->
+  </section>
+</body>
+
+</html>
