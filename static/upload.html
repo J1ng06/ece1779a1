@@ -70,12 +70,12 @@
 </style>
 
 <body>
-    <form name="uploadForm" class="ublock" onsubmit="uploadImage()" enctype="multipart/form-data" method="post">
+    <form name="uploadForm" class="ublock" enctype="multipart/form-data" method="post">
         What is the image files to upload?
-        <input type="file" id="image" name="uploadedfile">
+        <input type="file" id="image" name="uploadedfile" accept="image/jpeg, image/png">
         <br />
         <div id="outputDiv"></div>
-        <input type="submit" value="Send">
+        <input type="button" value="Send" onclick="uploadImage()">
         <input type="reset">
     </form>
 
@@ -90,96 +90,20 @@
 
     <!-- Photo Grid -->
     <div class="row">
-        <!-- <div class="column">
-    <img src="/w3images/wedding.jpg" style="width:100%">
-    <img src="/w3images/rocks.jpg" style="width:100%">
-    <img src="/w3images/falls2.jpg" style="width:100%">
-    <img src="/w3images/paris.jpg" style="width:100%">
-    <img src="/w3images/nature.jpg" style="width:100%">
-    <img src="/w3images/mist.jpg" style="width:100%">
-    <img src="/w3images/paris.jpg" style="width:100%">
-  </div>
-  <div class="column">
-    <img src="/w3images/underwater.jpg" style="width:100%">
-    <img src="/w3images/ocean.jpg" style="width:100%">
-    <img src="/w3images/wedding.jpg" style="width:100%">
-    <img src="/w3images/mountainskies.jpg" style="width:100%">
-    <img src="/w3images/rocks.jpg" style="width:100%">
-    <img src="/w3images/underwater.jpg" style="width:100%">
-  </div>  
-  <div class="column">
-    <img src="/w3images/wedding.jpg" style="width:100%">
-    <img src="/w3images/rocks.jpg" style="width:100%">
-    <img src="/w3images/falls2.jpg" style="width:100%">
-    <img src="/w3images/paris.jpg" style="width:100%">
-    <img src="/w3images/nature.jpg" style="width:100%">
-    <img src="/w3images/mist.jpg" style="width:100%">
-    <img src="/w3images/paris.jpg" style="width:100%">
-  </div>
-  <div class="column">
-    <img src="/w3images/underwater.jpg" style="width:100%">
-    <img src="/w3images/ocean.jpg" style="width:100%">
-    <img src="/w3images/wedding.jpg" style="width:100%">
-    <img src="/w3images/mountainskies.jpg" style="width:100%">
-    <img src="/w3images/rocks.jpg" style="width:100%">
-    <img src="/w3images/underwater.jpg" style="width:100%">
-  </div> -->
+
     </div>
     <script src="script/main.js"></script>
     <script type="text/javascript">
-        // Get the elements with class="column"
-        var elements = document.getElementsByClassName("column");
-
-        // Declare a loop variable
-        var i;
-
-        var form = document.forms["uploadForm"];
-
-        // Full-width images
-        function one() {
-            for (i = 0; i < elements.length; i++) {
-                elements[i].style.msFlex = "100%";  // IE10
-                elements[i].style.flex = "100%";
-            }
-        }
-
-        // Two images side by side
-        function two() {
-            for (i = 0; i < elements.length; i++) {
-                elements[i].style.msFlex = "50%";  // IE10
-                elements[i].style.flex = "50%";
-            }
-        }
-
-        // Four images side by side
-        function four() {
-            for (i = 0; i < elements.length; i++) {
-                elements[i].style.msFlex = "25%";  // IE10
-                elements[i].style.flex = "25%";
-            }
-        }
-
-        // Add active class to the current button (highlight it)
-        var header = document.getElementById("myHeader");
-        var btns = header.getElementsByClassName("btn");
-        for (var i = 0; i < btns.length; i++) {
-            btns[i].addEventListener("click", function () {
-                var current = document.getElementsByClassName("active");
-                current[0].className = current[0].className.replace(" active", "");
-                this.className += " active";
-            });
-        }
 
         function uploadImage() {
-
             alert("abc");
             var file = document.getElementById('image');
-            alert(file.innerHTML);
-            var xhr = new XMLHttpRequest();
-            xhr.open("post", "http://localhost:8080/image/upload", false)
-            xhr.send()
+            upload(file.files[0], "abc", "image/png");
+            // var xhr = new XMLHttpRequest();
+            // xhr.open("post", "http://localhost:8080/image/upload", false)
+            // xhr.send()
             //uploadImage(imgsrc, name, 'image/'+)
-        }
+        };
 
         // This function accepts three arguments, the URL of the image to be 
         // converted, the mime type of the Base64 image to be output, and a 
@@ -219,7 +143,7 @@
         // It will accept the image name, and the base64 data as arguments
         var sendBase64ToServer = function (name, base64) {
             var httpPost = new XMLHttpRequest(),
-                path = "http://localhost:8000/image/upload?username="+getFirstCookieName(),
+                path = "http://localhost:8000/image/upload?username=" + getFirstCookieName(),
                 data = JSON.stringify({ image: base64 });
             httpPost.onreadystatechange = function (err) {
                 if (httpPost.readyState == 4 && httpPost.status == 200) {
@@ -236,7 +160,7 @@
 
         // This wrapper function will accept the name of the image, the url, and the 
         // image type and perform the request
-        var uploadImage = function (src, name, type) {
+        var upload = function (src, name, type) {
             convertToBase64(src, type, function (data) {
                 sendBase64ToServer(name, data);
             });

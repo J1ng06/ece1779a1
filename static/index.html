@@ -20,7 +20,7 @@
     <div class="login">
       <h1>Login to App</h1>
       <!-- <form method="post" action="static/index.html"> -->
-      <form name="loginForm" action="javascript:authenticate()" method="post" onsubmit="login()" enctype="multipart/form-data">
+      <form name="loginForm" method="post" enctype="multipart/form-data">
         <p>
           <input type="text" name="username" value="" placeholder="UserName">
         </p>
@@ -34,21 +34,21 @@
           </label>
         </p> -->
         <p class="submit">
-          <input type="submit">
+          <input type="button" value="login" onclick="login()">
         </p>
       </form>
     </div>
     <script src="script/main.js"></script>
     <script type="text/javascript">
       function authenticate() {
-        var cookie = getFirstCookieName()
+        // var cookie = getFirstCookieName()
         var form = document.forms["loginForm"];
 
-        if (cookie) {
-          window.location.replace("http://localhost:8080/upload.html?username="+ form["username"].value);
-        } else {
-          alert("Invalid User Login")
-        }
+        // if (cookie) {
+        window.location.replace("http://localhost:8080/upload.html?username=" + form["username"].value);
+        // } else {
+        //   alert("Invalid User Login")
+        // }
       }
       function login() {
 
@@ -64,21 +64,21 @@
         }
 
         xhr.onreadystatechange = function () {
-          if (xhr.readyState === 4 && xhr.status === 200) {
-            //alert(xhr.response)
+          if (xhr.readyState == 4 && xhr.status == 200) {
+            alert(xhr.response)
             var response = JSON.parse(xhr.response);
             setCookie(response.name, response.value, response.lifetime);
+            //form.action = "upload.html?username="+ form["username"].value;
+            window.location.href = "upload.html?username=" + form["username"].value;
           }
         }
-
-
+        
         // send credentials
         xhr.open(form.method, "http://localhost:8080/user/login", false);
         xhr.setRequestHeader("Content-Type", "application/json; charset=UTF-8");
         console.log(JSON.stringify(data));
 
         xhr.send(JSON.stringify(data));
-
       }
     </script>
     <!-- <div class="login-help">
