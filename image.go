@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"image"
+	i "image"
 	"image/jpeg"
 	"image/png"
 	"os"
@@ -10,11 +10,16 @@ import (
 	"strings"
 )
 
-func GetImage(url string) (out image.Image, err error) {
-	imagePath, _ := os.Open(url)
-	defer imagePath.Close()
+type imageData struct {
+	Name  string `json:"name"`
+	Image string `json:"image"`
+}
 
-	srcImage, format, err := image.Decode(imagePath)
+func GetImage(url string) (out i.Image, err error) {
+	imageFile, _ := os.Open(url)
+	defer imageFile.Close()
+
+	srcImage, format, err := i.Decode(imageFile)
 
 	fmt.Println("[DEBUG] ", url, " ", format)
 
@@ -22,19 +27,25 @@ func GetImage(url string) (out image.Image, err error) {
 	return
 }
 
-func SetImage(srcImage image.Image, url string) (err error) {
+func SetImage(srcImage i.Image, url string) (err error) {
 
-	out, err := os.Create(path.Join(url))
+	err = os.MkdirAll(path.Dir(url), os.ModePerm)
 	if err != nil {
-		fmt.Println(err)
 		return
 	}
+
+	out, err := os.Create(url)
+	if err != nil {
+		return
+	}
+	defer out.Close()
 
 	if strings.HasSuffix(url, ".jpg") {
 		err = jpeg.Encode(out, srcImage, &jpeg.Options{jpeg.DefaultQuality})
 	} else if strings.HasSuffix(url, ".png") {
 		err = png.Encode(out, srcImage)
 	}
+
 	if err != nil {
 		fmt.Println(err)
 		return

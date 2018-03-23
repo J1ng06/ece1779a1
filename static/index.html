@@ -39,17 +39,8 @@
       </form>
     </div>
     <script src="script/main.js"></script>
-    <script type="text/javascript">
-      function authenticate() {
-        // var cookie = getFirstCookieName()
-        var form = document.forms["loginForm"];
-
-        // if (cookie) {
-        window.location.replace("http://localhost:8080/upload.html?username=" + form["username"].value);
-        // } else {
-        //   alert("Invalid User Login")
-        // }
-      }
+    <script>
+      
       function login() {
 
         var xhr = new XMLHttpRequest();
@@ -65,7 +56,6 @@
 
         xhr.onreadystatechange = function () {
           if (xhr.readyState == 4 && xhr.status == 200) {
-            alert(xhr.response)
             var response = JSON.parse(xhr.response);
             setCookie(response.name, response.value, response.lifetime);
             //form.action = "upload.html?username="+ form["username"].value;
@@ -74,16 +64,13 @@
         }
         
         // send credentials
-        xhr.open(form.method, "http://localhost:8080/user/login", false);
+        xhr.open(form.method, "http://localhost:8080/user/login", true);
         xhr.setRequestHeader("Content-Type", "application/json; charset=UTF-8");
         console.log(JSON.stringify(data));
 
         xhr.send(JSON.stringify(data));
       }
     </script>
-    <!-- <div class="login-help">
-      <p>Forgot your password? <a href="static/index.html">Click here to reset it</a>.</p>
-    </div> -->
   </section>
 </body>
 
