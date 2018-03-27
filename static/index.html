@@ -59,7 +59,8 @@
             var response = JSON.parse(xhr.response);
             setCookie(response.name, response.value, response.lifetime);
             //form.action = "upload.html?username="+ form["username"].value;
-            window.location.href = "upload.html?username=" + form["username"].value;
+            var location = xhr.getResponseHeader("Location").toLowerCase();
+            window.location.replace(location);
           }
         }
         

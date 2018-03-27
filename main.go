@@ -1,20 +1,11 @@
 package main
 
-import (
-	"net/http"
-
-	"gopkg.in/gographics/imagick.v2/imagick"
-)
+import "net/http"
 
 var (
 	sessions       = NewSessionManager()
 	cookieLifeTime = 7
 )
-
-func init() {
-	imagick.Initialize()
-	defer imagick.Terminate()
-}
 
 func main() {
 

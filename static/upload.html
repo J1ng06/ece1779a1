@@ -69,8 +69,8 @@
     }
 </style>
 
-<body>
-    <form name="uploadForm" class="ublock" enctype="multipart/form-data" method="post">
+<body onload="loadThumbnails()">
+    <form id="uploadForm" name="uploadForm" class="ublock" enctype="multipart/form-data" method="post">
         What is the image files to upload?
         <input type="file" id="image" name="uploadedfile" accept="image/jpeg, image/png">
         <br />
@@ -82,19 +82,21 @@
 
     <!-- Header -->
     <div class="header" id="myHeader">
-        <h1>Image Grid</h1>
-        <p>Click on the buttons to change the grid view.</p>
+        <h1>Image Thumbnails</h1>
+        <!-- <p>Click on the buttons to change the grid view.</p>
         <button class="btn" onclick="one()">1</button>
         <button class="btn active" onclick="two()">2</button>
-        <button class="btn" onclick="four()">4</button>
+        <button class="btn" onclick="four()">4</button> -->
     </div>
 
     <!-- Photo Grid -->
-    <div class="row">
-
+    <div id="row" class="row">
+        <div id="column" class="column">
+            <!-- <img src="/w3images/underwater.jpg" style="width:100%"> -->
+        </div>
     </div>
     <script src="script/main.js"></script>
-    <script>
+    <script type="text/javascript">
 
         document.getElementById('sendBtn').addEventListener('click', handleFileSend, false);
         document.getElementById('image').addEventListener('change', handleFileSelect, false);
@@ -103,6 +105,7 @@
         function handleReset() {
             document.getElementById('preview').innerHTML = "";
         }
+
         function handleFileSend(evt) {
 
             var tag = document.getElementById('image'); // FileList object
@@ -121,7 +124,7 @@
                 reader.onload = (function (theFile) {
                     return function (e) {
 
-                        var httpPost = new XMLHttpRequest(),
+                        var xhr = new XMLHttpRequest(),
                             path = "http://localhost:8080/image/upload?username=" + getFirstCookieName();
 
                         data = JSON.stringify({
@@ -129,16 +132,19 @@
                             image: e.target.result
                         });
                         
-                        httpPost.open("POST", path, true);
-                        httpPost.send(data);
+                        xhr.onreadystatechange = function(){
+                            if (xhr.status ==200 && xhr.readyState == 4){
+                                window.location.replace(xhr.getResponseHeader("Location").toLowerCase())
+                            }
+                        }
+                        xhr.open("POST", path, true);
+                        xhr.send(data);
 
                     };
                 })(f);
 
                 // Read in the image file as a data URL.
                 reader.readAsDataURL(f);
-
-
             }
         }
 
@@ -160,18 +166,48 @@
                     return function (e) {
                         var span = document.createElement('span');
                         span.innerHTML = ['<img class="thumb" src="', e.target.result,
-                            '" title="', escape(theFile.name), '" height=200px width=200px/>'].join('');
+                            '" title="', escape(theFile.name), ' width="200px" height="200px"/>'].join('');
                         document.getElementById('preview').insertBefore(span, null);
                     };
                 })(f);
 
                 // Read in the image file as a data URL.
                 reader.readAsDataURL(f);
-
-
             }
         }
 
+        function loadThumbnails() {
+            var xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState == 4 && xhr.status == 200) {
+                    var response = JSON.parse(xhr.response);
+                    var thumbnails = response.images.map(i => i.thumbnail);
+                    thumbnails.forEach(function (location) {
+                        loadThumbnail(location)
+                    });
+                }
+            }
+            xhr.open("Get", "http://localhost:8080/image/userimages?username=" + getFirstCookieName(), true);
+            xhr.send();
+        }
+
+        function loadThumbnail(location) {
+            var xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState == 4 && xhr.status == 200) {
+                    var response = xhr.response;
+                    console.log(response)
+                    var img = document.createElement('img');
+                    img.className = "thumb";
+                    img.src = response;
+                    img.style = "width:25%"
+                    document.getElementById('column').insertBefore(img, null);
+                }
+            }
+
+            xhr.open("Get", "http://localhost:8080/image/getimage?username=" + getFirstCookieName() + "&location=" + location, true);
+            xhr.send();
+        }
     </script>
 </body>
 

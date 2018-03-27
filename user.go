@@ -9,8 +9,9 @@ import (
 type User struct {
 	ID       int64  `gorm:"primary_key"`
 	Username string `json:"username"`
-	Password string `json:"password"`
+	Password string
 	Salt     string
+	Images   []Image `json:"images"`
 }
 
 func (u User) Authentication(pwd string) bool {
@@ -38,9 +39,9 @@ func (u *User) EncPass(pwd string) {
 	u.Password = base64.URLEncoding.EncodeToString(sum[:])
 }
 
-type UserImages struct {
+type Image struct {
 	ID        int64 `gorm:"primary_key"`
-	userId    int64
+	User_ID   int64
 	Original  string `json:"original"`
 	Thumbnail string `json:"thumbnail"`
 	T1        string `json:"t1"`

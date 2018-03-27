@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"image/jpeg"
+	"image/png"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -24,12 +26,25 @@ func HandleUser(w http.ResponseWriter, req *http.Request) {
 	//Timer
 	now := time.Now()
 	//Output
-	status, err := http.StatusOK, error(nil)
+	data, status, err := []byte(nil), http.StatusOK, error(nil)
 
 	//req.Header.Get("Cookie")
 
 	//Log Request
 	log.Printf("Request [Method: %s] [Path: %s]", req.Method, req.URL.Path)
+
+	//Write response
+	defer func() {
+
+		//Response
+		if status == http.StatusOK {
+			w.Header().Set("Content-Type", "application/json")
+			w.Write(data)
+		} else {
+			w.WriteHeader(status)
+		}
+
+	}()
 
 	// check http method
 	if req.Method != "POST" {
@@ -60,7 +75,7 @@ func HandleUser(w http.ResponseWriter, req *http.Request) {
 		err, status = errors.New(http.StatusText(http.StatusInternalServerError)), http.StatusInternalServerError
 		return
 	}
-	//fmt.Printf("[DEBUG] %+v\n", userReq)
+
 	username := userReq.Username
 	password := userReq.Password
 
@@ -69,7 +84,7 @@ func HandleUser(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	db, _ := NewConnection()
+	db, err := NewConnection()
 	if err != nil {
 		err, status = errors.New(http.StatusText(http.StatusInternalServerError)), http.StatusInternalServerError
 		return
@@ -82,6 +97,9 @@ func HandleUser(w http.ResponseWriter, req *http.Request) {
 
 		db.Find(user)
 		if user.Authentication(password) {
+
+			w.Header().Set("Location", fmt.Sprintf("upload.html?username=%s", username))
+
 			existing := sessions.Get(username)
 			if existing == nil {
 
@@ -99,27 +117,22 @@ func HandleUser(w http.ResponseWriter, req *http.Request) {
 				sessions.Set(newCookie)
 
 				//fmt.Printf("%v", newCookie)
-				data, err := json.Marshal(newCookie)
+				data, err = json.Marshal(newCookie)
 				if err != nil {
 					err, status = errors.New(http.StatusText(http.StatusInternalServerError)), http.StatusInternalServerError
 					return
 				}
-
-				w.Header().Set("Content-Type", "application/json")
-				w.Write(data)
 
 			} else {
 
-				data, err := json.Marshal(existing)
+				data, err = json.Marshal(existing)
 				if err != nil {
 					err, status = errors.New(http.StatusText(http.StatusInternalServerError)), http.StatusInternalServerError
 					return
 				}
 
-				w.Header().Set("Content-Type", "application/json")
-				w.Write(data)
-
 			}
+
 		}
 
 	case "register":
@@ -144,7 +157,20 @@ func HandleImage(w http.ResponseWriter, req *http.Request) {
 
 	now := time.Now()
 
-	status, err := http.StatusOK, error(nil)
+	data, status, err := []byte(nil), http.StatusOK, error(nil)
+
+	//Write response
+	defer func() {
+
+		//Response
+		if status == http.StatusOK {
+			w.Header().Set("Content-Type", "application/json")
+			w.Write(data)
+		} else {
+			w.WriteHeader(status)
+		}
+
+	}()
 
 	defer func() {
 		log.Printf("Response [Status: %d] [Path: %s] [Roundtrip: %d ms] [Error: %v]", status, req.URL.Path, (time.Now().Sub(now))/time.Millisecond, err)
@@ -158,11 +184,22 @@ func HandleImage(w http.ResponseWriter, req *http.Request) {
 	var action string
 	var temp string
 	fmt.Sscanf(strings.Replace(req.URL.Path, "/", " ", -1), "%s %s", &temp, &action)
+	username := req.URL.Query().Get("username")
+
+	db, _ := NewConnection()
+	if err != nil {
+		err, status = errors.New(http.StatusText(http.StatusInternalServerError)), http.StatusInternalServerError
+		return
+	}
+	defer db.Close()
+
+	user := &User{Username: username}
+	db.Find(&user)
 
 	switch action {
 	case "upload":
 		// get input
-		b, err := ioutil.ReadAll(req.Body)
+		body, err := ioutil.ReadAll(req.Body)
 		defer req.Body.Close()
 		if err != nil {
 			http.Error(w, err.Error(), 500)
@@ -170,7 +207,7 @@ func HandleImage(w http.ResponseWriter, req *http.Request) {
 		}
 
 		var uploaded imageData
-		err = json.Unmarshal(b, &uploaded)
+		err = json.Unmarshal(body, &uploaded)
 		if err != nil {
 			err, status = errors.New(http.StatusText(http.StatusInternalServerError)), http.StatusInternalServerError
 			return
@@ -190,19 +227,18 @@ func HandleImage(w http.ResponseWriter, req *http.Request) {
 		}
 		fmt.Println(srcImage.Bounds(), format)
 
-		username := req.URL.Query().Get("username")
 		uuid, err := exec.Command("uuidgen").Output()
 		if err != nil {
 			log.Fatal(err)
 		}
+		uuid = uuid[:len(uuid)-1]
 
 		var wg sync.WaitGroup
 		wg.Add(4)
 
 		var thumbnail image.Image
-		var t1 image.Image
-		var t2 image.Image
-		var t3 image.Image
+		b := srcImage.Bounds()
+		t1, t2, t3 := image.NewRGBA(b), image.NewRGBA(b), image.NewRGBA(b)
 
 		go func(thumbnail image.Image, wg *sync.WaitGroup) {
 			defer wg.Done()
@@ -212,18 +248,14 @@ func HandleImage(w http.ResponseWriter, req *http.Request) {
 
 		}(thumbnail, &wg)
 
-		go func(t1 image.Image, wg *sync.WaitGroup) {
+		go func(t1 *image.RGBA, wg *sync.WaitGroup) {
 			defer wg.Done()
 
-			width := srcImage.Bounds().Size().X
-			height := srcImage.Bounds().Size().Y
-			fmt.Println(width, height)
-
-			t1 = srcImage
-			blue := color.RGBA{0, 0, 255, 255}
-			for x := 0; x < width; x++ {
-				for y := 0; y < height; y++ {
-					t1.ColorModel().Convert(blue)
+			for y := b.Min.Y; y < b.Max.Y; y++ {
+				for x := b.Min.X; x < b.Max.X; x++ {
+					oldPixel := srcImage.At(x, y)
+					pixel := color.NRGBAModel.Convert(oldPixel)
+					t1.Set(x, y, pixel)
 				}
 			}
 
@@ -231,34 +263,28 @@ func HandleImage(w http.ResponseWriter, req *http.Request) {
 			SetImage(t1, path)
 		}(t1, &wg)
 
-		go func(t2 image.Image, wg *sync.WaitGroup) {
+		go func(t2 *image.RGBA, wg *sync.WaitGroup) {
 			defer wg.Done()
-			width := srcImage.Bounds().Size().X
-			height := srcImage.Bounds().Size().Y
-			fmt.Println(width, height)
 
-			t2 = srcImage
-			green := color.RGBA{0, 255, 0, 255}
-			for x := 0; x < width; x++ {
-				for y := 0; y < height; y++ {
-					t2.ColorModel().Convert(green)
+			for y := b.Min.Y; y < b.Max.Y; y++ {
+				for x := b.Min.X; x < b.Max.X; x++ {
+					oldPixel := srcImage.At(x, y)
+					pixel := color.GrayModel.Convert(oldPixel)
+					t2.Set(x, y, pixel)
 				}
 			}
 			path := fmt.Sprintf("%s/%s/t2.%s", username, uuid, format)
 			SetImage(t2, path)
 		}(t2, &wg)
 
-		go func(t3 image.Image, wg *sync.WaitGroup) {
+		go func(t3 *image.RGBA, wg *sync.WaitGroup) {
 			defer wg.Done()
-			width := srcImage.Bounds().Size().X
-			height := srcImage.Bounds().Size().Y
-			fmt.Println(width, height)
 
-			t3 = srcImage
-			red := color.RGBA{255, 0, 0, 255}
-			for x := 0; x < width; x++ {
-				for y := 0; y < height; y++ {
-					t3.ColorModel().Convert(red)
+			for y := b.Min.Y; y < b.Max.Y; y++ {
+				for x := b.Min.X; x < b.Max.X; x++ {
+					oldPixel := srcImage.At(x, y)
+					pixel := color.AlphaModel.Convert(oldPixel)
+					t3.Set(x, y, pixel)
 				}
 			}
 			path := fmt.Sprintf("%s/%s/t3.%s", username, uuid, format)
@@ -267,7 +293,62 @@ func HandleImage(w http.ResponseWriter, req *http.Request) {
 
 		wg.Wait()
 
+		fmt.Println(user.ID)
+		db.Create(&Image{
+			User_ID:   user.ID,
+			Original:  fmt.Sprintf("%s/%s/original.%s", username, uuid, format),
+			Thumbnail: fmt.Sprintf("%s/%s/thumbnail.%s", username, uuid, format),
+			T1:        fmt.Sprintf("%s/%s/t1.%s", username, uuid, format),
+			T2:        fmt.Sprintf("%s/%s/t2.%s", username, uuid, format),
+			T3:        fmt.Sprintf("%s/%s/t3.%s", username, uuid, format),
+		})
+
+		w.Header().Set("Location", fmt.Sprintf("upload.html?username=%s", username))
+
 		return
+
+	case "userimages":
+		db.Where("id=?", user.ID).Preload("Images").Find(&user)
+
+		// TODO: fix the json marshal with password and salt
+		user.Password = ""
+		user.Salt = ""
+
+		data, err = json.Marshal(user)
+		if err != nil {
+			err, status = errors.New(http.StatusText(http.StatusInternalServerError)), http.StatusInternalServerError
+		}
+
+		return
+
+	case "getimage":
+
+		location := req.URL.Query().Get("location")
+		if location == "" {
+			err, status = errors.New(http.StatusText(http.StatusBadRequest)), http.StatusBadRequest
+			return
+		}
+
+		result, err := GetImage(location)
+		if err != nil {
+			err, status = errors.New(http.StatusText(http.StatusInternalServerError)), http.StatusInternalServerError
+			return
+		}
+
+		buf := new(bytes.Buffer)
+		encodedString := ""
+		if strings.HasSuffix(location, ".png") {
+			err = png.Encode(buf, result)
+			encodedString = fmt.Sprintf("data:image/png;base64,%s", base64.StdEncoding.EncodeToString(buf.Bytes()))
+		} else if strings.HasSuffix(location, ".jpg") {
+			err = jpeg.Encode(buf, result, &jpeg.Options{jpeg.DefaultQuality})
+			encodedString = fmt.Sprintf("data:image/jpeg;base64,%s", base64.StdEncoding.EncodeToString(buf.Bytes()))
+		}
+
+		data = []byte(encodedString)
+
+		return
+
 	default:
 		err, status = errors.New(http.StatusText(http.StatusInternalServerError)), http.StatusInternalServerError
 		return
