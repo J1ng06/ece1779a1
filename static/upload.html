@@ -69,7 +69,7 @@
     }
 </style>
 
-<body onload="loadThumbnails()">
+<body onload="initalLoad()">
     <form id="uploadForm" name="uploadForm" class="ublock" enctype="multipart/form-data" method="post">
         What is the image files to upload?
         <input type="file" id="image" name="uploadedfile" accept="image/jpeg, image/png">
@@ -101,6 +101,8 @@
         document.getElementById('sendBtn').addEventListener('click', handleFileSend, false);
         document.getElementById('image').addEventListener('change', handleFileSelect, false);
         document.getElementById('resetBtn').addEventListener('click', handleReset, false);
+        
+        var imagecounts;
 
         function handleReset() {
             document.getElementById('preview').innerHTML = "";
@@ -131,9 +133,9 @@
                             name: theFile.name,
                             image: e.target.result
                         });
-                        
-                        xhr.onreadystatechange = function(){
-                            if (xhr.status ==200 && xhr.readyState == 4){
+
+                        xhr.onreadystatechange = function () {
+                            if (xhr.status == 200 && xhr.readyState == 4) {
                                 window.location.replace(xhr.getResponseHeader("Location").toLowerCase())
                             }
                         }
@@ -176,18 +178,36 @@
             }
         }
 
-        function loadThumbnails() {
+        function initalLoad() {
+            var xhr = new XMLHttpRequest();
+
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    var imagecounts = JSON.parse(xhr.response);
+                    console.log(imagecounts)
+                    var page = 0;
+                    loadThumbnails(page)
+
+                }
+            }
+            xhr.open("Get", "http://localhost:8080/image/userimagecount?username=" + getFirstCookieName(), true);
+            xhr.send();
+        }
+
+        function loadThumbnails(page) {
             var xhr = new XMLHttpRequest();
             xhr.onreadystatechange = function () {
                 if (xhr.readyState == 4 && xhr.status == 200) {
                     var response = JSON.parse(xhr.response);
                     var thumbnails = response.images.map(i => i.thumbnail);
+                    console.log(thumbnails)
                     thumbnails.forEach(function (location) {
                         loadThumbnail(location)
                     });
                 }
             }
-            xhr.open("Get", "http://localhost:8080/image/userimages?username=" + getFirstCookieName(), true);
+
+            xhr.open("Get", "http://localhost:8080/image/userimages?username=" + getFirstCookieName() + "&page=" + page, true);
             xhr.send();
         }
 

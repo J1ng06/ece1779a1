@@ -14,6 +14,7 @@ import (
 	"log"
 	"net/http"
 	"os/exec"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -196,6 +197,8 @@ func HandleImage(w http.ResponseWriter, req *http.Request) {
 	user := &User{Username: username}
 	db.Find(&user)
 
+	pageSize := 3
+
 	switch action {
 	case "upload":
 		// get input
@@ -307,20 +310,39 @@ func HandleImage(w http.ResponseWriter, req *http.Request) {
 
 		return
 
-	case "userimages":
+	case "userimagecount":
+
 		db.Where("id=?", user.ID).Preload("Images").Find(&user)
 
 		// TODO: fix the json marshal with password and salt
 		user.Password = ""
 		user.Salt = ""
 
-		data, err = json.Marshal(user)
+		data, err = json.Marshal(len(user.Images))
 		if err != nil {
 			err, status = errors.New(http.StatusText(http.StatusInternalServerError)), http.StatusInternalServerError
 		}
 
 		return
 
+	case "userimages":
+
+		page, err := strconv.Atoi(req.URL.Query().Get("page"))
+		if err != nil {
+			err, status = errors.New(http.StatusText(http.StatusBadRequest)), http.StatusBadRequest
+			return
+		}
+
+		// TODO: fix the json marshal with password and salt
+		user.Password = ""
+		user.Salt = ""
+
+		data, err = json.Marshal(user.Images[page*pageSize : (page+1)*pageSize])
+		if err != nil {
+			err, status = errors.New(http.StatusText(http.StatusInternalServerError)), http.StatusInternalServerError
+		}
+
+		return
 	case "getimage":
 
 		location := req.URL.Query().Get("location")
@@ -359,16 +381,6 @@ func HandleImage(w http.ResponseWriter, req *http.Request) {
 func ValidateCookie(handler http.Handler) (out http.Handler) {
 
 	out = http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-
-		now := time.Now()
-		err := error(nil)
-
-		//Log Response
-		defer func() {
-
-			log.Printf("Response [Path: %s] [Roundtrip: %d ms] [Error: %v]", req.URL.Path, (time.Now().Sub(now))/time.Millisecond, err)
-
-		}()
 
 		if req.URL.Path != "/" && strings.HasSuffix(req.URL.Path, ".html") {
 
