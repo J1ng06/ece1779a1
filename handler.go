@@ -217,6 +217,7 @@ func HandleImage(w http.ResponseWriter, req *http.Request) {
 		}
 
 		imageURL := strings.Replace(uploaded.Image, "data:image/png;base64,", "", 1)
+		imageURL = strings.Replace(imageURL, "data:image/jpeg;base64,", "", 1)
 		unbased, err := base64.StdEncoding.DecodeString(imageURL)
 		if err != nil {
 			err, status = errors.New(http.StatusText(http.StatusInternalServerError)), http.StatusInternalServerError
@@ -242,6 +243,10 @@ func HandleImage(w http.ResponseWriter, req *http.Request) {
 		var thumbnail image.Image
 		b := srcImage.Bounds()
 		t1, t2, t3 := image.NewRGBA(b), image.NewRGBA(b), image.NewRGBA(b)
+
+		go func() {
+			SetImage(srcImage, fmt.Sprintf("%s/%s/original.%s", username, uuid, format))
+		}()
 
 		go func(thumbnail image.Image, wg *sync.WaitGroup) {
 			defer wg.Done()
@@ -286,7 +291,7 @@ func HandleImage(w http.ResponseWriter, req *http.Request) {
 			for y := b.Min.Y; y < b.Max.Y; y++ {
 				for x := b.Min.X; x < b.Max.X; x++ {
 					oldPixel := srcImage.At(x, y)
-					pixel := color.AlphaModel.Convert(oldPixel)
+					pixel := color.CMYKModel.Convert(oldPixel)
 					t3.Set(x, y, pixel)
 				}
 			}
@@ -333,11 +338,16 @@ func HandleImage(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
+		db.Where("id=?", user.ID).Preload("Images").Find(&user)
 		// TODO: fix the json marshal with password and salt
 		user.Password = ""
 		user.Salt = ""
-
-		data, err = json.Marshal(user.Images[page*pageSize : (page+1)*pageSize])
+		start := page * pageSize
+		end := (page + 1) * pageSize
+		if end > len(user.Images) {
+			end = len(user.Images)
+		}
+		data, err = json.Marshal(user.Images[start:end])
 		if err != nil {
 			err, status = errors.New(http.StatusText(http.StatusInternalServerError)), http.StatusInternalServerError
 		}
@@ -362,7 +372,7 @@ func HandleImage(w http.ResponseWriter, req *http.Request) {
 		if strings.HasSuffix(location, ".png") {
 			err = png.Encode(buf, result)
 			encodedString = fmt.Sprintf("data:image/png;base64,%s", base64.StdEncoding.EncodeToString(buf.Bytes()))
-		} else if strings.HasSuffix(location, ".jpg") {
+		} else if strings.HasSuffix(location, ".jpeg") {
 			err = jpeg.Encode(buf, result, &jpeg.Options{jpeg.DefaultQuality})
 			encodedString = fmt.Sprintf("data:image/jpeg;base64,%s", base64.StdEncoding.EncodeToString(buf.Bytes()))
 		}

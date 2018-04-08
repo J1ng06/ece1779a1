@@ -67,6 +67,85 @@
         right: 5px;
         font-size: 18px;
     }
+
+    /* The Modal (background) */
+
+    .modal {
+        display: none;
+        /* Hidden by default */
+        position: fixed;
+        /* Stay in place */
+        z-index: 1;
+        /* Sit on top */
+        padding-top: 100px;
+        /* Location of the box */
+        left: 0;
+        top: 0;
+        width: 100%;
+        /* Full width */
+        height: 100%;
+        /* Full height */
+        overflow: auto;
+        /* Enable scroll if needed */
+        background-color: rgb(0, 0, 0);
+        /* Fallback color */
+        background-color: rgba(0, 0, 0, 0.4);
+        /* Black w/ opacity */
+    }
+
+    /* Modal Content */
+
+    .modal-content {
+        background-color: #fefefe;
+        margin: auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 80%;
+    }
+
+    /* The Close Button */
+
+    .close {
+        color: #aaaaaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+    }
+
+    .close:hover,
+    .close:focus {
+        color: #000;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    .center {
+        text-align: center;
+    }
+
+    .pagination {
+        display: inline-block;
+    }
+
+    .pagination a {
+        color: black;
+        float: left;
+        padding: 8px 16px;
+        text-decoration: none;
+        transition: background-color .3s;
+        border: 1px solid #ddd;
+        margin: 0 4px;
+    }
+
+    .pagination a.active {
+        background-color: #4CAF50;
+        color: white;
+        border: 1px solid #4CAF50;
+    }
+
+    .pagination a:hover:not(.active) {
+        background-color: #ddd;
+    }
 </style>
 
 <body onload="initalLoad()">
@@ -95,14 +174,37 @@
             <!-- <img src="/w3images/underwater.jpg" style="width:100%"> -->
         </div>
     </div>
+
+    <!-- The Modal -->
+    <div id="modal" class="modal">
+
+        <!-- Modal content -->
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div id="images"></div>
+        </div>
+
+    </div>
+    <div class="center">
+        <div class="pagination" id="pagination">
+        </div>
+    </div>
     <script src="script/main.js"></script>
     <script type="text/javascript">
 
         document.getElementById('sendBtn').addEventListener('click', handleFileSend, false);
         document.getElementById('image').addEventListener('change', handleFileSelect, false);
         document.getElementById('resetBtn').addEventListener('click', handleReset, false);
-        
+
         var imagecounts;
+        var pageSize = 3;
+
+        var modal = document.getElementById('modal');
+        window.onclick = function (event) {
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
 
         function handleReset() {
             document.getElementById('preview').innerHTML = "";
@@ -184,23 +286,54 @@
             xhr.onreadystatechange = function () {
                 if (xhr.readyState === 4 && xhr.status === 200) {
                     var imagecounts = JSON.parse(xhr.response);
-                    console.log(imagecounts)
+                    console.log(imagecounts);
+
+                    if (imagecounts > pageSize) {
+                        var pagination = document.getElementById("pagination");
+
+                        var lq = document.createElement("lq")
+                        lq.innerHTML = '<a href="#">&laquo;</a>'
+                        pagination.insertBefore(lq, null)
+                        for (var i = 0; i < imagecounts; i = i + pageSize) {
+
+                            var a = document.createElement("a")
+                            a.setAttribute("href", "#");
+                            a.setAttribute("id", "page" + (i / pageSize + 1));
+                            a.setAttribute("onclick", ['onclick=loadThumbnails(', i / pageSize, ', this.id)'].join(""));
+                            a.innerHTML = i / pageSize + 1;
+                            if (i === 0) {
+                                a.setAttribute("class", "active");
+                            }
+                            pagination.insertBefore(a, null)
+                        }
+                        var rq = document.createElement("rq")
+                        rq.innerHTML = '<a href="#">&raquo;</a>';
+                        pagination.insertBefore(rq, null)
+                    }
                     var page = 0;
                     loadThumbnails(page)
-
                 }
             }
             xhr.open("Get", "http://localhost:8080/image/userimagecount?username=" + getFirstCookieName(), true);
             xhr.send();
         }
 
-        function loadThumbnails(page) {
+        function loadThumbnails(page, id) {
+            if (id) {
+                console.log(id);
+                var pages = document.getElementById("pagination").childNodes;
+                pages.forEach(function (page) {
+                    console.log(page);
+                });
+            }
             var xhr = new XMLHttpRequest();
             xhr.onreadystatechange = function () {
                 if (xhr.readyState == 4 && xhr.status == 200) {
                     var response = JSON.parse(xhr.response);
-                    var thumbnails = response.images.map(i => i.thumbnail);
-                    console.log(thumbnails)
+                    console.log(response)
+                    document.getElementById('column').innerHTML = "";
+                    var thumbnails = response.map(i => i.thumbnail);
+
                     thumbnails.forEach(function (location) {
                         loadThumbnail(location)
                     });
@@ -216,12 +349,48 @@
             xhr.onreadystatechange = function () {
                 if (xhr.readyState == 4 && xhr.status == 200) {
                     var response = xhr.response;
-                    console.log(response)
                     var img = document.createElement('img');
                     img.className = "thumb";
                     img.src = response;
-                    img.style = "width:25%"
+                    img.style = "width:25%";
+                    img.setAttribute("id", location)
+                    img.setAttribute("onclick", "showModal(this.id)");
                     document.getElementById('column').insertBefore(img, null);
+                }
+            }
+
+            xhr.open("Get", "http://localhost:8080/image/getimage?username=" + getFirstCookieName() + "&location=" + location, true);
+            xhr.send();
+        }
+
+        function showModal(id) {
+
+            var span = document.getElementsByClassName("close")[0];
+            var images = document.getElementById("images");
+            images.innerHTML = "";
+            ["original", "t1", "t2", "t3"].forEach(function (e) {
+                loadImage(id.replace("thumbnail", e))
+            });
+
+            modal.style.display = "block";
+            span.onclick = function () {
+                modal.style.display = "none";
+            }
+
+
+        }
+
+        function loadImage(location) {
+            var xhr = new XMLHttpRequest();
+            var images = document.getElementById("images");
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState == 4 && xhr.status == 200) {
+                    var response = xhr.response;
+                    var img = document.createElement('img');
+                    img.src = response;
+                    img.id = location;
+                    img.style = "width:100%";
+                    images.appendChild(img);
                 }
             }
 

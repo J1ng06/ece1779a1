@@ -40,7 +40,7 @@ func SetImage(srcImage i.Image, url string) (err error) {
 	}
 	defer out.Close()
 
-	if strings.HasSuffix(url, ".jpg") {
+	if strings.HasSuffix(url, ".jpeg") || strings.HasSuffix(url, ".jpg") {
 		err = jpeg.Encode(out, srcImage, &jpeg.Options{jpeg.DefaultQuality})
 	} else if strings.HasSuffix(url, ".png") {
 		err = png.Encode(out, srcImage)
