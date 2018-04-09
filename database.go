@@ -7,7 +7,7 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 )
 
-const ConnectionString = "host=localhost user=jingnanchen password=ece1779pass dbname=ece1779 port=5432 sslmode=disable"
+const ConnectionString = "host=localhost dbname=ece1779 port=5432 sslmode=disable"
 
 func NewConnection() (db *gorm.DB, err error) {
 
