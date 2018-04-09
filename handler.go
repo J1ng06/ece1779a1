@@ -133,6 +133,10 @@ func HandleUser(w http.ResponseWriter, req *http.Request) {
 
 			}
 
+		} else {
+			err, status = errors.New(http.StatusText(http.StatusNotFound)), http.StatusNotFound
+			w.Header().Set("Location", "/")
+			return
 		}
 
 	case "register":

@@ -31,3 +31,94 @@ function checkCookie(name) {
         }
     }
 }
+
+function login() {
+
+    var xhr = new XMLHttpRequest();
+
+    var form = document.forms["loginForm"];
+    var data = {};
+    for (var i = 0, ii = form.length; i < ii; i++) {
+        var input = form[i];
+        if (input.name) {
+            data[input.name] = input.value;
+        }
+    }
+
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState === 4 && xhr.status === 200) {
+
+            var response = JSON.parse(xhr.response);
+            setCookie(response.name, response.value, response.lifetime);
+            var location = xhr.getResponseHeader("Location").toLowerCase();
+            window.location.replace(location);
+
+        } else if (xhr.readyState === 4 && xhr.status === 404) {
+
+            form.reset();
+            alert("Username or password is not correct!");
+            var location = xhr.getResponseHeader("Location").toLowerCase();
+            window.location.replace(location);
+
+        }
+    }
+
+    // send credentials
+    xhr.open(form.method, "user/login", true);
+    xhr.setRequestHeader("Content-Type", "application/json; charset=UTF-8");
+    console.log(JSON.stringify(data));
+
+    xhr.send(JSON.stringify(data));
+}
+
+function register() {
+
+    var xhr = new XMLHttpRequest();
+
+    var form = document.forms["registerForm"];
+    if (!form["username"].value) {
+        form.reset();
+        alert("Please enter valid username!")
+        return
+    }
+    if (!form["password"].value) {
+        form.reset();
+        alert("Please enter valid password!")
+        return
+    }
+    if (!form["passwordConfirm"].value) {
+        form.reset();
+        alert("Please enter valid password!")
+        return
+    }
+    if (form["passwordConfirm"].value != form["password"].value) {
+        form.reset();
+        alert("Two passwords are not the same!")
+        return
+    }
+    var data = {};
+    for (var i = 0, ii = form.length; i < ii; i++) {
+        var input = form[i];
+        if (input.name) {
+            data[input.name] = input.value;
+        }
+    }
+
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState == 4 && xhr.status == 200) {
+            var location = xhr.getResponseHeader("Location").toLowerCase();
+            window.location.replace(location);
+        }
+        if (xhr.readyState == 4 && xhr.status == 400) {
+            form.reset();
+            alert("Username" + form["username"].value + " has been taken!")
+        }
+    }
+
+    // send credentials
+    xhr.open(form.method, "user/register", true);
+    xhr.setRequestHeader("Content-Type", "application/json; charset=UTF-8");
+    console.log(JSON.stringify(data));
+
+    xhr.send(JSON.stringify(data));
+}
