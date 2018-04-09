@@ -8,21 +8,21 @@ import (
 	"time"
 )
 
-type CookieSlim struct {
+type Cookie struct {
 	Name  string `json:"name"`
 	Value string `json:"value"`
 }
 
 type SessionManager struct {
-	Cookies map[CookieSlim]struct{}
+	Cookies map[Cookie]struct{}
 	lock    sync.Mutex
 }
 
 func NewSessionManager() *SessionManager {
-	return &SessionManager{Cookies: make(map[CookieSlim]struct{})}
+	return &SessionManager{Cookies: make(map[Cookie]struct{})}
 }
 
-func (session *SessionManager) Get(name string) *CookieSlim {
+func (session *SessionManager) Get(name string) *Cookie {
 
 	session.lock.Lock()
 	defer session.lock.Unlock()
@@ -35,7 +35,7 @@ func (session *SessionManager) Get(name string) *CookieSlim {
 	return nil
 }
 
-func (session *SessionManager) Set(cookie *CookieSlim) {
+func (session *SessionManager) Set(cookie *Cookie) {
 
 	session.lock.Lock()
 	defer session.lock.Unlock()
@@ -47,7 +47,7 @@ func (session *SessionManager) Set(cookie *CookieSlim) {
 	})
 }
 
-func (session *SessionManager) Del(cookie *CookieSlim) {
+func (session *SessionManager) Del(cookie *Cookie) {
 
 	session.lock.Lock()
 	defer session.lock.Unlock()

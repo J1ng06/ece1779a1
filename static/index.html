@@ -27,12 +27,9 @@
         <p>
           <input type="password" name="password" value="" placeholder="Password">
         </p>
-        <!-- <p class="remember_me">
-          <label>
-            <input type="checkbox" name="remember_me" id="remember_me">
-            Remember me on this computer
-          </label>
-        </p> -->
+        <p class="register">
+          <a href="register.html">Register?</a>
+        </p>
         <p class="submit">
           <input type="button" value="login" onclick="login()">
         </p>
@@ -65,7 +62,7 @@
         }
         
         // send credentials
-        xhr.open(form.method, "http://localhost:8080/user/login", true);
+        xhr.open(form.method, "user/login", true);
         xhr.setRequestHeader("Content-Type", "application/json; charset=UTF-8");
         console.log(JSON.stringify(data));
 

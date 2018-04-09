@@ -34,9 +34,10 @@
         padding: 0 4px;
     }
 
-    .column img {
+    .thumb {
         margin-top: 8px;
         vertical-align: middle;
+        padding: 4px;
     }
 
     /* Style the buttons */
@@ -72,23 +73,15 @@
 
     .modal {
         display: none;
-        /* Hidden by default */
         position: fixed;
-        /* Stay in place */
         z-index: 1;
-        /* Sit on top */
         padding-top: 100px;
-        /* Location of the box */
         left: 0;
         top: 0;
         width: 100%;
-        /* Full width */
         height: 100%;
-        /* Full height */
         overflow: auto;
-        /* Enable scroll if needed */
         background-color: rgb(0, 0, 0);
-        /* Fallback color */
         background-color: rgba(0, 0, 0, 0.4);
         /* Black w/ opacity */
     }
@@ -162,10 +155,7 @@
     <!-- Header -->
     <div class="header" id="myHeader">
         <h1>Image Thumbnails</h1>
-        <!-- <p>Click on the buttons to change the grid view.</p>
-        <button class="btn" onclick="one()">1</button>
-        <button class="btn active" onclick="two()">2</button>
-        <button class="btn" onclick="four()">4</button> -->
+        <button class="btn" onclick="logout()">Logout</button>
     </div>
 
     <!-- Photo Grid -->
@@ -197,7 +187,7 @@
         document.getElementById('resetBtn').addEventListener('click', handleReset, false);
 
         var imagecounts;
-        var pageSize = 3;
+        var pageSize = 8;
 
         var modal = document.getElementById('modal');
         window.onclick = function (event) {
@@ -229,7 +219,7 @@
                     return function (e) {
 
                         var xhr = new XMLHttpRequest(),
-                            path = "http://localhost:8080/image/upload?username=" + getFirstCookieName();
+                            path = "image/upload?username=" + window.location.href.split('username=')[1];
 
                         data = JSON.stringify({
                             name: theFile.name,
@@ -290,40 +280,37 @@
 
                     if (imagecounts > pageSize) {
                         var pagination = document.getElementById("pagination");
-
-                        var lq = document.createElement("lq")
-                        lq.innerHTML = '<a href="#">&laquo;</a>'
-                        pagination.insertBefore(lq, null)
                         for (var i = 0; i < imagecounts; i = i + pageSize) {
 
                             var a = document.createElement("a")
-                            a.setAttribute("href", "#");
                             a.setAttribute("id", "page" + (i / pageSize + 1));
-                            a.setAttribute("onclick", ['onclick=loadThumbnails(', i / pageSize, ', this.id)'].join(""));
+                            a.setAttribute("onclick", ['loadThumbnails(', i / pageSize, ', this.id)'].join(""));
                             a.innerHTML = i / pageSize + 1;
                             if (i === 0) {
                                 a.setAttribute("class", "active");
+                            } else {
+                                a.setAttribute("class", "inactive");
                             }
                             pagination.insertBefore(a, null)
                         }
-                        var rq = document.createElement("rq")
-                        rq.innerHTML = '<a href="#">&raquo;</a>';
-                        pagination.insertBefore(rq, null)
+
                     }
                     var page = 0;
                     loadThumbnails(page)
                 }
             }
-            xhr.open("Get", "http://localhost:8080/image/userimagecount?username=" + getFirstCookieName(), true);
+            xhr.open("Get", "image/userimagecount?username=" + window.location.href.split('username=')[1], true);
             xhr.send();
         }
 
         function loadThumbnails(page, id) {
             if (id) {
-                console.log(id);
-                var pages = document.getElementById("pagination").childNodes;
-                pages.forEach(function (page) {
-                    console.log(page);
+                var pages = [].slice.call(document.getElementById("pagination").children);
+                pages.forEach(function (e) {
+                    e.setAttribute("class", "inactive");
+                    if (e.id === id) {
+                        e.setAttribute("class", "active");
+                    }
                 });
             }
             var xhr = new XMLHttpRequest();
@@ -339,8 +326,7 @@
                     });
                 }
             }
-
-            xhr.open("Get", "http://localhost:8080/image/userimages?username=" + getFirstCookieName() + "&page=" + page, true);
+            xhr.open("Get", "image/userimages?username=" + window.location.href.split('username=')[1] + "&page=" + page, true);
             xhr.send();
         }
 
@@ -359,7 +345,7 @@
                 }
             }
 
-            xhr.open("Get", "http://localhost:8080/image/getimage?username=" + getFirstCookieName() + "&location=" + location, true);
+            xhr.open("Get", "image/getimage?username=" + window.location.href.split('username=')[1] + "&location=" + location, true);
             xhr.send();
         }
 
@@ -394,8 +380,25 @@
                 }
             }
 
-            xhr.open("Get", "http://localhost:8080/image/getimage?username=" + getFirstCookieName() + "&location=" + location, true);
+            xhr.open("Get", "image/getimage?username=" + window.location.href.split('username=')[1] + "&location=" + location, true);
             xhr.send();
+        }
+
+        function logout() {
+            var xhr = new XMLHttpRequest();
+            var data = {
+                "username": window.location.href.split('username')[1],
+                "password": "logout"
+            }
+            xhr.onreadystatechange = function () {
+                if (xhr.status == 200 && xhr.readyState == 4) {
+                    window.location.replace(xhr.getResponseHeader("Location").toLowerCase())
+                }
+            }
+
+            xhr.open("Post", "user/logout", true);
+            xhr.setRequestHeader("Content-Type", "application/json; charset=UTF-8");
+            xhr.send(JSON.stringify(data));
         }
     </script>
 </body>

@@ -47,16 +47,16 @@ func HandleUser(w http.ResponseWriter, req *http.Request) {
 
 	}()
 
+	//Log Response
+	defer func() {
+		log.Printf("Response [Status: %d] [Path: %s] [Roundtrip: %d ms] [Error: %v]", status, req.URL.Path, (time.Now().Sub(now))/time.Millisecond, err)
+	}()
+
 	// check http method
 	if req.Method != "POST" {
 		err, status = errors.New(http.StatusText(http.StatusMethodNotAllowed)), http.StatusMethodNotAllowed
 		return
 	}
-
-	//Log Response
-	defer func() {
-		log.Printf("Response [Status: %d] [Path: %s] [Roundtrip: %d ms] [Error: %v]", status, req.URL.Path, (time.Now().Sub(now))/time.Millisecond, err)
-	}()
 
 	var action string
 	var temp string
@@ -92,11 +92,11 @@ func HandleUser(w http.ResponseWriter, req *http.Request) {
 	}
 	defer db.Close()
 
-	user := &User{Username: username}
+	user := new(User)
 	switch action {
 	case "login":
 
-		db.Find(user)
+		db.Find(user, "username = ?", username)
 		if user.Authentication(password) {
 
 			w.Header().Set("Location", fmt.Sprintf("upload.html?username=%s", username))
@@ -110,14 +110,13 @@ func HandleUser(w http.ResponseWriter, req *http.Request) {
 					return
 				}
 
-				newCookie := &CookieSlim{
+				newCookie := &Cookie{
 					Name:  username,
 					Value: value,
 				}
 
 				sessions.Set(newCookie)
 
-				//fmt.Printf("%v", newCookie)
 				data, err = json.Marshal(newCookie)
 				if err != nil {
 					err, status = errors.New(http.StatusText(http.StatusInternalServerError)), http.StatusInternalServerError
@@ -137,6 +136,12 @@ func HandleUser(w http.ResponseWriter, req *http.Request) {
 		}
 
 	case "register":
+		db.Find(user, "username = ?", username)
+
+		if user.Password != "" {
+			err, status = errors.New(http.StatusText(http.StatusBadRequest)), http.StatusBadRequest
+			return
+		}
 
 		err = user.RandomSalt()
 		if err != nil {
@@ -146,6 +151,12 @@ func HandleUser(w http.ResponseWriter, req *http.Request) {
 
 		user.EncPass(password)
 		db.Create(&user)
+		w.Header().Set("Location", "/")
+
+	case "logout":
+		existing := sessions.Get(username)
+		sessions.Del(existing)
+		w.Header().Set("Location", "/")
 
 	default:
 		err, status = errors.New(http.StatusText(http.StatusBadRequest)), http.StatusBadRequest
@@ -194,10 +205,10 @@ func HandleImage(w http.ResponseWriter, req *http.Request) {
 	}
 	defer db.Close()
 
-	user := &User{Username: username}
-	db.Find(&user)
+	user := &User{}
+	db.Find(&user, "username = ?", username)
 
-	pageSize := 3
+	pageSize := 8
 
 	switch action {
 	case "upload":
@@ -229,7 +240,6 @@ func HandleImage(w http.ResponseWriter, req *http.Request) {
 			err, status = errors.New(http.StatusText(http.StatusInternalServerError)), http.StatusInternalServerError
 			return
 		}
-		fmt.Println(srcImage.Bounds(), format)
 
 		uuid, err := exec.Command("uuidgen").Output()
 		if err != nil {
@@ -300,8 +310,6 @@ func HandleImage(w http.ResponseWriter, req *http.Request) {
 		}(t3, &wg)
 
 		wg.Wait()
-
-		fmt.Println(user.ID)
 		db.Create(&Image{
 			User_ID:   user.ID,
 			Original:  fmt.Sprintf("%s/%s/original.%s", username, uuid, format),
@@ -339,6 +347,7 @@ func HandleImage(w http.ResponseWriter, req *http.Request) {
 		}
 
 		db.Where("id=?", user.ID).Preload("Images").Find(&user)
+
 		// TODO: fix the json marshal with password and salt
 		user.Password = ""
 		user.Salt = ""
@@ -391,8 +400,7 @@ func HandleImage(w http.ResponseWriter, req *http.Request) {
 func ValidateCookie(handler http.Handler) (out http.Handler) {
 
 	out = http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-
-		if req.URL.Path != "/" && strings.HasSuffix(req.URL.Path, ".html") {
+		if (req.URL.Path != "/" && req.URL.Path != "/register.html") && strings.HasSuffix(req.URL.Path, ".html") {
 
 			username := req.URL.Query().Get("username")
 
@@ -404,7 +412,7 @@ func ValidateCookie(handler http.Handler) (out http.Handler) {
 			if err != nil {
 				return
 			}
-			fmt.Println("[DEBUG] ", cookie.Name, "Value", cookie.Value)
+
 			if c := sessions.Get(cookie.Name); c == nil {
 				return
 			}

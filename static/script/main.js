@@ -31,16 +31,3 @@ function checkCookie(name) {
         }
     }
 }
-
-function getFirstCookieName() {
-    var ca = document.cookie.split(';');
-    for (var i = 0; i < ca.length; i++) {
-        var c = ca[i].trim();
-        if (c.includes("=ece1779/")){
-            return c.substring(0, c.indexOf("=ece1779/"));
-        }
-    }
-
-    return null
-    
-}
