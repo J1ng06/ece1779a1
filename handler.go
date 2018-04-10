@@ -79,7 +79,7 @@ func HandleUser(w http.ResponseWriter, req *http.Request) {
 
 	username := userReq.Username
 	password := userReq.Password
-
+	log.Println("[DEBUG] ", username, password)
 	if username == "" || password == "" {
 		err, status = errors.New(http.StatusText(http.StatusBadRequest)), http.StatusBadRequest
 		return
