@@ -14,7 +14,7 @@ func NewConnection() (db *gorm.DB, err error) {
 	db = new(gorm.DB)
 	db, err = gorm.Open("postgres", ConnectionString)
 	if err != nil {
-		log.Fatal("fatal db")
+		log.Fatal("could not connect to db; fatal db", err)
 		return nil, err
 	}
 	db.Exec("SET SEARCH_PATH to a1")

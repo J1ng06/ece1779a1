@@ -73,13 +73,14 @@ func HandleUser(w http.ResponseWriter, req *http.Request) {
 	var userReq User
 	err = json.Unmarshal(b, &userReq)
 	if err != nil {
+		fmt.Println("[DEBUG Unmarshal]", err)
 		err, status = errors.New(http.StatusText(http.StatusInternalServerError)), http.StatusInternalServerError
 		return
 	}
 
 	username := userReq.Username
 	password := userReq.Password
-	log.Println("[DEBUG] ", username, password)
+	fmt.Println("[DEBUG] ", username, password)
 	if username == "" || password == "" {
 		err, status = errors.New(http.StatusText(http.StatusBadRequest)), http.StatusBadRequest
 		return
@@ -146,6 +147,8 @@ func HandleUser(w http.ResponseWriter, req *http.Request) {
 			err, status = errors.New(http.StatusText(http.StatusBadRequest)), http.StatusBadRequest
 			return
 		}
+
+		user.Username = username
 
 		err = user.RandomSalt()
 		if err != nil {
